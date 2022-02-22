@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spectree.spec &mdash; spectree  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> spectree
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../spectree.html">SpecTree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../response.html">Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">spectree</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spectree.spec</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spectree.spec</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">Configuration</span><span class="p">,</span> <span class="n">ModeEnum</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Tag</span><span class="p">,</span> <span class="n">ValidationError</span>
+<span class="kn">from</span> <span class="nn">.plugins</span> <span class="kn">import</span> <span class="n">PLUGINS</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">default_after_handler</span><span class="p">,</span>
+    <span class="n">default_before_handler</span><span class="p">,</span>
+    <span class="n">get_model_key</span><span class="p">,</span>
+    <span class="n">get_model_schema</span><span class="p">,</span>
+    <span class="n">get_security</span><span class="p">,</span>
+    <span class="n">parse_comments</span><span class="p">,</span>
+    <span class="n">parse_name</span><span class="p">,</span>
+    <span class="n">parse_params</span><span class="p">,</span>
+    <span class="n">parse_request</span><span class="p">,</span>
+    <span class="n">parse_resp</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="SpecTree"><a class="viewcode-back" href="../../spectree.html#spectree.spec.SpecTree">[docs]</a><span class="k">class</span> <span class="nc">SpecTree</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Interface</span>
+
+<span class="sd">    :param str backend_name: choose from (&#39;flask&#39;, &#39;falcon&#39;, &#39;falcon-asgi&#39;, &#39;starlette&#39;)</span>
+<span class="sd">    :param backend: a backend that inherit `SpecTree.plugins.base.BasePlugin`</span>
+<span class="sd">    :param app: backend framework application instance (can be registered later)</span>
+<span class="sd">    :param before: a callback function of the form</span>
+<span class="sd">        :meth:`spectree.utils.default_before_handler`</span>
+<span class="sd">        ``func(req, resp, req_validation_error, instance)``</span>
+<span class="sd">        that will be called after the request validation before the endpoint function</span>
+<span class="sd">    :param after: a callback function of the form</span>
+<span class="sd">        :meth:`spectree.utils.default_after_handler`</span>
+<span class="sd">        ``func(req, resp, resp_validation_error, instance)``</span>
+<span class="sd">        that will be called after the response validation</span>
+<span class="sd">    :param validation_error_status: The default response status code to use in the</span>
+<span class="sd">        event of a validation error. This value can be overridden for specific endpoints</span>
+<span class="sd">        if needed.</span>
+<span class="sd">    :param kwargs: init :class:`spectree.config.Configuration`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">backend_name</span><span class="o">=</span><span class="s2">&quot;base&quot;</span><span class="p">,</span>
+        <span class="n">backend</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">app</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">before</span><span class="o">=</span><span class="n">default_before_handler</span><span class="p">,</span>
+        <span class="n">after</span><span class="o">=</span><span class="n">default_after_handler</span><span class="p">,</span>
+        <span class="n">validation_error_status</span><span class="o">=</span><span class="mi">422</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">before</span> <span class="o">=</span> <span class="n">before</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">after</span> <span class="o">=</span> <span class="n">after</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validation_error_status</span> <span class="o">=</span> <span class="n">validation_error_status</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">:</span> <span class="n">Configuration</span> <span class="o">=</span> <span class="n">Configuration</span><span class="o">.</span><span class="n">parse_obj</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend_name</span> <span class="o">=</span> <span class="n">backend_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">backend</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="k">if</span> <span class="n">backend</span> <span class="k">else</span> <span class="n">PLUGINS</span><span class="p">[</span><span class="n">backend_name</span><span class="p">](</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># init</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">app</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SpecTree.register"><a class="viewcode-back" href="../../spectree.html#spectree.spec.SpecTree.register">[docs]</a>    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        register to backend application</span>
+
+<span class="sd">        This will be automatically triggered if the app is passed into the</span>
+<span class="sd">        init step.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">app</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">register_route</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">spec</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        get the OpenAPI spec</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_spec&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_spec</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span>
+
+<div class="viewcode-block" id="SpecTree.bypass"><a class="viewcode-back" href="../../spectree.html#spectree.spec.SpecTree.bypass">[docs]</a>    <span class="k">def</span> <span class="nf">bypass</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        bypass rules for routes (mode defined in config)</span>
+
+<span class="sd">        :normal:    collect all the routes exclude those decorated by other</span>
+<span class="sd">                    `SpecTree` instance</span>
+<span class="sd">        :greedy:    collect all the routes</span>
+<span class="sd">        :strict:    collect all the routes decorated by this instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ModeEnum</span><span class="o">.</span><span class="n">greedy</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="n">ModeEnum</span><span class="o">.</span><span class="n">strict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;_decorator&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">decorator</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;_decorator&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">decorator</span> <span class="ow">and</span> <span class="n">decorator</span> <span class="o">!=</span> <span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpecTree.validate"><a class="viewcode-back" href="../../spectree.html#spectree.spec.SpecTree.validate">[docs]</a>    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">query</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">json</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">headers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">cookies</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">resp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">(),</span>
+        <span class="n">security</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">deprecated</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">before</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">after</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">validation_error_status</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">path_parameter_descriptions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        - validate query, json, headers in request</span>
+<span class="sd">        - validate response body and status code</span>
+<span class="sd">        - add tags to this API route</span>
+<span class="sd">        - add security to this API route</span>
+
+<span class="sd">        :param query: `pydantic.BaseModel`, query in uri like `?name=value`</span>
+<span class="sd">        :param json: `pydantic.BaseModel`, JSON format request body</span>
+<span class="sd">        :param headers: `pydantic.BaseModel`, if you have specific headers</span>
+<span class="sd">        :param cookies: `pydantic.BaseModel`, if you have cookies for this route</span>
+<span class="sd">        :param resp: `spectree.Response`</span>
+<span class="sd">        :param tags: a tuple of strings or :class:`spectree.models.Tag`</span>
+<span class="sd">        :param security: dict with security config for current route and method</span>
+<span class="sd">        :param deprecated: bool if endpoint is marked as deprecated</span>
+<span class="sd">        :param before: :meth:`spectree.utils.default_before_handler` for</span>
+<span class="sd">            specific endpoint</span>
+<span class="sd">        :param after: :meth:`spectree.utils.default_after_handler` for</span>
+<span class="sd">            specific endpoint</span>
+<span class="sd">        :param validation_error_status: The response status code to use for the</span>
+<span class="sd">            specific endpoint, in the event of a validation error. If not specified,</span>
+<span class="sd">            the global `validation_error_status` is used instead, defined</span>
+<span class="sd">            in :meth:`spectree.spec.SpecTree`.</span>
+<span class="sd">        :param path_parameter_descriptions: A dictionary of path parameter names and</span>
+<span class="sd">            their description.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># If the status code for validation errors is not overridden on the level of</span>
+        <span class="c1"># the view function, use the globally set status code for validation errors.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">validation_error_status</span><span class="p">:</span>
+            <span class="n">validation_error_status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_error_status</span>
+
+        <span class="k">def</span> <span class="nf">decorate_validation</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+            <span class="c1"># for sync framework</span>
+            <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+            <span class="k">def</span> <span class="nf">sync_validate</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span>
+                    <span class="n">func</span><span class="p">,</span>
+                    <span class="n">query</span><span class="p">,</span>
+                    <span class="n">json</span><span class="p">,</span>
+                    <span class="n">headers</span><span class="p">,</span>
+                    <span class="n">cookies</span><span class="p">,</span>
+                    <span class="n">resp</span><span class="p">,</span>
+                    <span class="n">before</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">before</span><span class="p">,</span>
+                    <span class="n">after</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">,</span>
+                    <span class="n">validation_error_status</span><span class="p">,</span>
+                    <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="c1"># for async framework</span>
+            <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+            <span class="k">async</span> <span class="k">def</span> <span class="nf">async_validate</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span>
+                    <span class="n">func</span><span class="p">,</span>
+                    <span class="n">query</span><span class="p">,</span>
+                    <span class="n">json</span><span class="p">,</span>
+                    <span class="n">headers</span><span class="p">,</span>
+                    <span class="n">cookies</span><span class="p">,</span>
+                    <span class="n">resp</span><span class="p">,</span>
+                    <span class="n">before</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">before</span><span class="p">,</span>
+                    <span class="n">after</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">after</span><span class="p">,</span>
+                    <span class="n">validation_error_status</span><span class="p">,</span>
+                    <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">validation</span> <span class="o">=</span> <span class="n">async_validate</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">ASYNC</span> <span class="k">else</span> <span class="n">sync_validate</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">annotations</span><span class="p">:</span>
+                <span class="k">nonlocal</span> <span class="n">query</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__annotations__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;query&quot;</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+                <span class="k">nonlocal</span> <span class="n">json</span>
+                <span class="n">json</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__annotations__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="n">json</span><span class="p">)</span>
+                <span class="k">nonlocal</span> <span class="n">headers</span>
+                <span class="n">headers</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__annotations__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;headers&quot;</span><span class="p">,</span> <span class="n">headers</span><span class="p">)</span>
+                <span class="k">nonlocal</span> <span class="n">cookies</span>
+                <span class="n">cookies</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="vm">__annotations__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cookies&quot;</span><span class="p">,</span> <span class="n">cookies</span><span class="p">)</span>
+
+            <span class="c1"># register</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                <span class="p">(</span><span class="s2">&quot;query&quot;</span><span class="p">,</span> <span class="s2">&quot;json&quot;</span><span class="p">,</span> <span class="s2">&quot;headers&quot;</span><span class="p">,</span> <span class="s2">&quot;cookies&quot;</span><span class="p">),</span> <span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">json</span><span class="p">,</span> <span class="n">headers</span><span class="p">,</span> <span class="n">cookies</span><span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">model_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_model</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">validation</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">model_key</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">resp</span><span class="p">:</span>
+                <span class="c1"># Make sure that the endpoint specific status code and data model for</span>
+                <span class="c1"># validation errors shows up in the response spec.</span>
+                <span class="n">resp</span><span class="o">.</span><span class="n">add_model</span><span class="p">(</span><span class="n">validation_error_status</span><span class="p">,</span> <span class="n">ValidationError</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">model</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">models</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_model</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+                <span class="n">validation</span><span class="o">.</span><span class="n">resp</span> <span class="o">=</span> <span class="n">resp</span>
+
+            <span class="k">if</span> <span class="n">tags</span><span class="p">:</span>
+                <span class="n">validation</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">tags</span>
+
+            <span class="n">validation</span><span class="o">.</span><span class="n">security</span> <span class="o">=</span> <span class="n">security</span>
+            <span class="n">validation</span><span class="o">.</span><span class="n">deprecated</span> <span class="o">=</span> <span class="n">deprecated</span>
+            <span class="n">validation</span><span class="o">.</span><span class="n">path_parameter_descriptions</span> <span class="o">=</span> <span class="n">path_parameter_descriptions</span>
+            <span class="c1"># register decorator</span>
+            <span class="n">validation</span><span class="o">.</span><span class="n">_decorator</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="k">return</span> <span class="n">validation</span>
+
+        <span class="k">return</span> <span class="n">decorate_validation</span></div>
+
+    <span class="k">def</span> <span class="nf">_add_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        unified model processing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">model_key</span> <span class="o">=</span> <span class="n">get_model_key</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">model_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">get_model_schema</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">model_key</span>
+
+    <span class="k">def</span> <span class="nf">_generate_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        generate OpenAPI spec according to routes and decorators</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">routes</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">route</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">find_routes</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">method</span><span class="p">,</span> <span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">parse_func</span><span class="p">(</span><span class="n">route</span><span class="p">):</span>
+                <span class="n">path_parameter_descriptions</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
+                    <span class="n">func</span><span class="p">,</span> <span class="s2">&quot;path_parameter_descriptions&quot;</span><span class="p">,</span> <span class="kc">None</span>
+                <span class="p">)</span>
+                <span class="n">path</span><span class="p">,</span> <span class="n">parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">parse_path</span><span class="p">(</span>
+                    <span class="n">route</span><span class="p">,</span> <span class="n">path_parameter_descriptions</span>
+                <span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">bypass</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">bypass</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+                    <span class="k">continue</span>
+
+                <span class="n">name</span> <span class="o">=</span> <span class="n">parse_name</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+                <span class="n">summary</span><span class="p">,</span> <span class="n">desc</span> <span class="o">=</span> <span class="n">parse_comments</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+                <span class="n">func_tags</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="p">())</span>
+                <span class="k">for</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">func_tags</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">tag</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+                        <span class="n">tags</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">tag</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">tag</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">Tag</span><span class="p">)</span> <span class="k">else</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">tag</span><span class="p">}</span>
+                        <span class="p">)</span>
+
+                <span class="n">routes</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;summary&quot;</span><span class="p">:</span> <span class="n">summary</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> &lt;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&gt;&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;operationId&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">desc</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="p">())],</span>
+                    <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">parse_params</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">parameters</span><span class="p">[:],</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">),</span>
+                    <span class="s2">&quot;responses&quot;</span><span class="p">:</span> <span class="n">parse_resp</span><span class="p">(</span><span class="n">func</span><span class="p">),</span>
+                <span class="p">}</span>
+
+                <span class="n">security</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;security&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">security</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">routes</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="s2">&quot;security&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_security</span><span class="p">(</span><span class="n">security</span><span class="p">)</span>
+
+                <span class="n">deprecated</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;deprecated&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">deprecated</span><span class="p">:</span>
+                    <span class="n">routes</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="s2">&quot;deprecated&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">deprecated</span>
+
+                <span class="n">request_body</span> <span class="o">=</span> <span class="n">parse_request</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">request_body</span><span class="p">:</span>
+                    <span class="n">routes</span><span class="p">[</span><span class="n">path</span><span class="p">][</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()][</span><span class="s2">&quot;requestBody&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">request_body</span>
+
+        <span class="n">spec</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;openapi&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">openapi_version</span><span class="p">,</span>
+            <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">openapi_info</span><span class="p">(),</span>
+            <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">tags</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+            <span class="s2">&quot;paths&quot;</span><span class="p">:</span> <span class="p">{</span><span class="o">**</span><span class="n">routes</span><span class="p">},</span>
+            <span class="s2">&quot;components&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;schemas&quot;</span><span class="p">:</span> <span class="p">{</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_model_definitions</span><span class="p">()},</span>
+            <span class="p">},</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">servers</span><span class="p">:</span>
+            <span class="n">spec</span><span class="p">[</span><span class="s2">&quot;servers&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">server</span><span class="o">.</span><span class="n">dict</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">servers</span>
+            <span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">security_schemes</span><span class="p">:</span>
+            <span class="n">spec</span><span class="p">[</span><span class="s2">&quot;components&quot;</span><span class="p">][</span><span class="s2">&quot;securitySchemes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">scheme</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">scheme</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dict</span><span class="p">(</span><span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">by_alias</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">scheme</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">security_schemes</span>
+            <span class="p">}</span>
+
+        <span class="n">spec</span><span class="p">[</span><span class="s2">&quot;security&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_security</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">security</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">spec</span>
+
+    <span class="k">def</span> <span class="nf">_get_model_definitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        handle nested models</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">definitions</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">schema</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s2">&quot;definitions&quot;</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">[</span><span class="s2">&quot;definitions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">definitions</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">del</span> <span class="n">schema</span><span class="p">[</span><span class="s2">&quot;definitions&quot;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">definitions</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Keming Yang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

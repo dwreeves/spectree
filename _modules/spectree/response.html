@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spectree.response &mdash; spectree  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> spectree
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../spectree.html">SpecTree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../response.html">Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">spectree</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spectree.response</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spectree.response</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">get_model_key</span><span class="p">,</span> <span class="n">parse_code</span>
+
+<span class="n">OptionalModelType</span> <span class="o">=</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]]</span>
+
+
+<div class="viewcode-block" id="Response"><a class="viewcode-back" href="../../response.html#spectree.response.Response">[docs]</a><span class="k">class</span> <span class="nc">Response</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    response object</span>
+
+<span class="sd">    :param codes: list of HTTP status code, format(&#39;HTTP_[0-9]{3}&#39;), &#39;HTTP_200&#39;</span>
+<span class="sd">    :param code_models: dict of &lt;HTTP status code&gt;: &lt;`pydantic.BaseModel`&gt; or None or</span>
+<span class="sd">        a two element tuple of (&lt;`pydantic.BaseModel`&gt; or None) as the first item and</span>
+<span class="sd">        a custom status code description string as the second item.</span>
+
+<span class="sd">    examples:</span>
+
+<span class="sd">        &gt;&gt;&gt; from spectree.response import Response</span>
+<span class="sd">        &gt;&gt;&gt; from pydantic import BaseModel</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; class User(BaseModel):</span>
+<span class="sd">        ...     id: int</span>
+<span class="sd">        ...</span>
+<span class="sd">        &gt;&gt;&gt; response = Response(HTTP_200)</span>
+<span class="sd">        &gt;&gt;&gt; response = Response(HTTP_200=None)</span>
+<span class="sd">        &gt;&gt;&gt; response = Response(HTTP_200=User)</span>
+<span class="sd">        &gt;&gt;&gt; response = Response(HTTP_200=(User, &quot;status code description&quot;))</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">codes</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">code_models</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">OptionalModelType</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">OptionalModelType</span><span class="p">,</span> <span class="nb">str</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">codes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">codes</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">DEFAULT_CODE_DESC</span><span class="p">,</span> <span class="s2">&quot;invalid HTTP status code&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">codes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">code_models</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">code_descriptions</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">code</span><span class="p">,</span> <span class="n">model_and_description</span> <span class="ow">in</span> <span class="n">code_models</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">assert</span> <span class="n">code</span> <span class="ow">in</span> <span class="n">DEFAULT_CODE_DESC</span><span class="p">,</span> <span class="s2">&quot;invalid HTTP status code&quot;</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">model_and_description</span>
+            <span class="n">description</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_and_description</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">model_and_description</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span>
+                    <span class="s2">&quot;unexpected number of arguments for a tuple of &quot;</span>
+                    <span class="s2">&quot;`pydantic.BaseModel` and HTTP status code description&quot;</span>
+                <span class="p">)</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="n">model_and_description</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">description</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">model_and_description</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">model</span><span class="p">:</span>
+                <span class="k">assert</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">),</span> <span class="s2">&quot;invalid `pydantic.BaseModel`&quot;</span>
+                <span class="k">assert</span> <span class="n">description</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span>
+                    <span class="n">description</span><span class="p">,</span> <span class="nb">str</span>
+                <span class="p">),</span> <span class="s2">&quot;invalid HTTP status code description&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code_models</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">codes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">description</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">code_descriptions</span><span class="p">[</span><span class="n">code</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span>
+
+<div class="viewcode-block" id="Response.add_model"><a class="viewcode-back" href="../../response.html#spectree.response.Response.add_model">[docs]</a>    <span class="k">def</span> <span class="nf">add_model</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">code</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">],</span>
+        <span class="n">replace</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Add data *model* for the specified status *code*.</span>
+
+<span class="sd">        :param code: An HTTP status code.</span>
+<span class="sd">        :param model: A `pydantic.BaseModel`.</span>
+<span class="sd">        :param replace: If `True` and a data *model* already exists for the given</span>
+<span class="sd">            status *code* it will be replaced, if `False` the existing data *model*</span>
+<span class="sd">            will be retained.</span>
+<span class="sd">        :param description: The description string for the code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">replace</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_model</span><span class="p">(</span><span class="n">code</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="n">code_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;HTTP_</span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">code_models</span><span class="p">[</span><span class="n">code_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="k">if</span> <span class="n">description</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">code_descriptions</span><span class="p">[</span><span class="n">code_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">description</span></div>
+
+<div class="viewcode-block" id="Response.has_model"><a class="viewcode-back" href="../../response.html#spectree.response.Response.has_model">[docs]</a>    <span class="k">def</span> <span class="nf">has_model</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :returns: boolean -- does this response has models or not</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code_models</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Response.find_model"><a class="viewcode-back" href="../../response.html#spectree.response.Response.find_model">[docs]</a>    <span class="k">def</span> <span class="nf">find_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :param code: ``r&#39;\\d{3}&#39;``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">code_models</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;HTTP_</span><span class="si">{</span><span class="n">code</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Response.get_code_description"><a class="viewcode-back" href="../../response.html#spectree.response.Response.get_code_description">[docs]</a>    <span class="k">def</span> <span class="nf">get_code_description</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Get the description of the given status code.</span>
+
+<span class="sd">        :param code: Status code string, format(&#39;HTTP_[0-9]_{3}&#39;), &#39;HTTP_200&#39;.</span>
+<span class="sd">        :returns: The status code&#39;s description.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">code_descriptions</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">code</span><span class="p">)</span> <span class="ow">or</span> <span class="n">DEFAULT_CODE_DESC</span><span class="p">[</span><span class="n">code</span><span class="p">]</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">models</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="n">BaseModel</span><span class="p">]]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :returns:  dict_values -- all the models in this response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">code_models</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Response.generate_spec"><a class="viewcode-back" href="../../response.html#spectree.response.Response.generate_spec">[docs]</a>    <span class="k">def</span> <span class="nf">generate_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        generate the spec for responses</span>
+
+<span class="sd">        :returns: JSON</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">responses</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">code</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">codes</span><span class="p">:</span>
+            <span class="n">responses</span><span class="p">[</span><span class="n">parse_code</span><span class="p">(</span><span class="n">code</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_code_description</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
+            <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">code</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">code_models</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">model_name</span> <span class="o">=</span> <span class="n">get_model_key</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">responses</span><span class="p">[</span><span class="n">parse_code</span><span class="p">(</span><span class="n">code</span><span class="p">)]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_code_description</span><span class="p">(</span><span class="n">code</span><span class="p">),</span>
+                <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;application/json&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$ref&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;#/components/schemas/</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+                    <span class="p">}</span>
+                <span class="p">},</span>
+            <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">responses</span></div></div>
+
+
+<span class="c1"># according to https://tools.ietf.org/html/rfc2616#section-10</span>
+<span class="c1"># https://tools.ietf.org/html/rfc7231#section-6.1</span>
+<span class="c1"># https://developer.mozilla.org/sv-SE/docs/Web/HTTP/Status</span>
+<span class="n">DEFAULT_CODE_DESC</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Information 1xx</span>
+    <span class="s2">&quot;HTTP_100&quot;</span><span class="p">:</span> <span class="s2">&quot;Continue&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_101&quot;</span><span class="p">:</span> <span class="s2">&quot;Switching Protocols&quot;</span><span class="p">,</span>
+    <span class="c1"># Successful 2xx</span>
+    <span class="s2">&quot;HTTP_200&quot;</span><span class="p">:</span> <span class="s2">&quot;OK&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_201&quot;</span><span class="p">:</span> <span class="s2">&quot;Created&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_202&quot;</span><span class="p">:</span> <span class="s2">&quot;Accepted&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_203&quot;</span><span class="p">:</span> <span class="s2">&quot;Non-Authoritative Information&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_204&quot;</span><span class="p">:</span> <span class="s2">&quot;No Content&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_205&quot;</span><span class="p">:</span> <span class="s2">&quot;Reset Content&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_206&quot;</span><span class="p">:</span> <span class="s2">&quot;Partial Content&quot;</span><span class="p">,</span>
+    <span class="c1"># Redirection 3xx</span>
+    <span class="s2">&quot;HTTP_300&quot;</span><span class="p">:</span> <span class="s2">&quot;Multiple Choices&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_301&quot;</span><span class="p">:</span> <span class="s2">&quot;Moved Permanently&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_302&quot;</span><span class="p">:</span> <span class="s2">&quot;Found&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_303&quot;</span><span class="p">:</span> <span class="s2">&quot;See Other&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_304&quot;</span><span class="p">:</span> <span class="s2">&quot;Not Modified&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_305&quot;</span><span class="p">:</span> <span class="s2">&quot;Use Proxy&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_306&quot;</span><span class="p">:</span> <span class="s2">&quot;(Unused)&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_307&quot;</span><span class="p">:</span> <span class="s2">&quot;Temporary Redirect&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_308&quot;</span><span class="p">:</span> <span class="s2">&quot;Permanent Redirect&quot;</span><span class="p">,</span>
+    <span class="c1"># Client Error 4xx</span>
+    <span class="s2">&quot;HTTP_400&quot;</span><span class="p">:</span> <span class="s2">&quot;Bad Request&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_401&quot;</span><span class="p">:</span> <span class="s2">&quot;Unauthorized&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_402&quot;</span><span class="p">:</span> <span class="s2">&quot;Payment Required&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_403&quot;</span><span class="p">:</span> <span class="s2">&quot;Forbidden&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_404&quot;</span><span class="p">:</span> <span class="s2">&quot;Not Found&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_405&quot;</span><span class="p">:</span> <span class="s2">&quot;Method Not Allowed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_406&quot;</span><span class="p">:</span> <span class="s2">&quot;Not Acceptable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_407&quot;</span><span class="p">:</span> <span class="s2">&quot;Proxy Authentication Required&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_408&quot;</span><span class="p">:</span> <span class="s2">&quot;Request Timeout&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_409&quot;</span><span class="p">:</span> <span class="s2">&quot;Conflict&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_410&quot;</span><span class="p">:</span> <span class="s2">&quot;Gone&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_411&quot;</span><span class="p">:</span> <span class="s2">&quot;Length Required&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_412&quot;</span><span class="p">:</span> <span class="s2">&quot;Precondition Failed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_413&quot;</span><span class="p">:</span> <span class="s2">&quot;Request Entity Too Large&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_414&quot;</span><span class="p">:</span> <span class="s2">&quot;Request-URI Too Long&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_415&quot;</span><span class="p">:</span> <span class="s2">&quot;Unsupported Media Type&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_416&quot;</span><span class="p">:</span> <span class="s2">&quot;Requested Range Not Satisfiable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_417&quot;</span><span class="p">:</span> <span class="s2">&quot;Expectation Failed&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_418&quot;</span><span class="p">:</span> <span class="s2">&quot;I&#39;m a teapot&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_421&quot;</span><span class="p">:</span> <span class="s2">&quot;Misdirected Request&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_422&quot;</span><span class="p">:</span> <span class="s2">&quot;Unprocessable Entity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_423&quot;</span><span class="p">:</span> <span class="s2">&quot;Locked&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_424&quot;</span><span class="p">:</span> <span class="s2">&quot;Failed Dependency&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_425&quot;</span><span class="p">:</span> <span class="s2">&quot;Too Early&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_426&quot;</span><span class="p">:</span> <span class="s2">&quot;Upgrade Required&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_428&quot;</span><span class="p">:</span> <span class="s2">&quot;Precondition Required&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_429&quot;</span><span class="p">:</span> <span class="s2">&quot;Too Many Requests&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_431&quot;</span><span class="p">:</span> <span class="s2">&quot;Request Header Fields Too Large&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_451&quot;</span><span class="p">:</span> <span class="s2">&quot;Unavailable For Legal Reasons&quot;</span><span class="p">,</span>
+    <span class="c1"># Server Error 5xx</span>
+    <span class="s2">&quot;HTTP_500&quot;</span><span class="p">:</span> <span class="s2">&quot;Internal Server Error&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_501&quot;</span><span class="p">:</span> <span class="s2">&quot;Not Implemented&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_502&quot;</span><span class="p">:</span> <span class="s2">&quot;Bad Gateway&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_503&quot;</span><span class="p">:</span> <span class="s2">&quot;Service Unavailable&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_504&quot;</span><span class="p">:</span> <span class="s2">&quot;Gateway Timeout&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_505&quot;</span><span class="p">:</span> <span class="s2">&quot;HTTP Version Not Supported&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_506&quot;</span><span class="p">:</span> <span class="s2">&quot;Variant Also negotiates&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_507&quot;</span><span class="p">:</span> <span class="s2">&quot;Insufficient Sotrage&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_508&quot;</span><span class="p">:</span> <span class="s2">&quot;Loop Detected&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;HTTP_511&quot;</span><span class="p">:</span> <span class="s2">&quot;Network Authentication Required&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Keming Yang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

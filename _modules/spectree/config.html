@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spectree.config &mdash; spectree  documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> spectree
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../spectree.html">SpecTree</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../response.html">Response</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugins.html">Plugins</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">Utils</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">spectree</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+      <li>spectree.config</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for spectree.config</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">AnyUrl</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">BaseSettings</span><span class="p">,</span> <span class="n">EmailStr</span><span class="p">,</span> <span class="n">root_validator</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">SecurityScheme</span><span class="p">,</span> <span class="n">Server</span>
+<span class="kn">from</span> <span class="nn">.page</span> <span class="kn">import</span> <span class="n">DEFAULT_PAGE_TEMPLATES</span>
+
+
+<div class="viewcode-block" id="ModeEnum"><a class="viewcode-back" href="../../config.html#spectree.config.ModeEnum">[docs]</a><span class="k">class</span> <span class="nc">ModeEnum</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;the mode of the SpecTree validator&quot;&quot;&quot;</span>
+
+    <span class="c1">#: includes undecorated routes and routes decorated by this instance</span>
+    <span class="n">normal</span> <span class="o">=</span> <span class="s2">&quot;normal&quot;</span>
+    <span class="c1">#: only includes routes decorated by this instance</span>
+    <span class="n">strict</span> <span class="o">=</span> <span class="s2">&quot;strict&quot;</span>
+    <span class="c1">#: includes all the routes</span>
+    <span class="n">greedy</span> <span class="o">=</span> <span class="s2">&quot;greedy&quot;</span></div>
+
+
+<div class="viewcode-block" id="Contact"><a class="viewcode-back" href="../../config.html#spectree.config.Contact">[docs]</a><span class="k">class</span> <span class="nc">Contact</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;contact information&quot;&quot;&quot;</span>
+
+    <span class="c1">#: name of the contact</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: contact url</span>
+    <span class="n">url</span><span class="p">:</span> <span class="n">AnyUrl</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: contact email address</span>
+    <span class="n">email</span><span class="p">:</span> <span class="n">EmailStr</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="License"><a class="viewcode-back" href="../../config.html#spectree.config.License">[docs]</a><span class="k">class</span> <span class="nc">License</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;license information&quot;&quot;&quot;</span>
+
+    <span class="c1">#: name of the license</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="c1">#: license url</span>
+    <span class="n">url</span><span class="p">:</span> <span class="n">AnyUrl</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="Configuration"><a class="viewcode-back" href="../../config.html#spectree.config.Configuration">[docs]</a><span class="k">class</span> <span class="nc">Configuration</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+    <span class="c1"># OpenAPI configurations</span>
+    <span class="c1">#: title of the service</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Service API Document&quot;</span>
+    <span class="c1">#: service OpenAPI document description</span>
+    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: service version</span>
+    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;0.1.0&quot;</span>
+    <span class="c1">#: terms of service url</span>
+    <span class="n">terms_of_service</span><span class="p">:</span> <span class="n">AnyUrl</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: author contact information</span>
+    <span class="n">contact</span><span class="p">:</span> <span class="n">Contact</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: license information</span>
+    <span class="n">license</span><span class="p">:</span> <span class="n">License</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># SpecTree configurations</span>
+    <span class="c1">#: OpenAPI doc route path prefix (i.e. /apidoc/)</span>
+    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;apidoc&quot;</span>
+    <span class="c1">#: OpenAPI file route path suffix (i.e. /apidoc/openapi.json)</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;openapi.json&quot;</span>
+    <span class="c1">#: OpenAPI version (doesn&#39;t affect anything)</span>
+    <span class="n">openapi_version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;3.0.3&quot;</span>
+    <span class="c1">#: the mode of the SpecTree validator :class:`ModeEnum`</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">ModeEnum</span> <span class="o">=</span> <span class="n">ModeEnum</span><span class="o">.</span><span class="n">normal</span>
+    <span class="c1">#: A dictionary of documentation page templates. The key is the</span>
+    <span class="c1">#: name of the template, that is also used in the URL path, while the value is used</span>
+    <span class="c1">#: to render the documentation page content. (Each page template should contain a</span>
+    <span class="c1">#: `{spec_url}` placeholder, that&#39;ll be replaced by the actual OpenAPI spec URL in</span>
+    <span class="c1">#: the rendered documentation page</span>
+    <span class="n">page_templates</span> <span class="o">=</span> <span class="n">DEFAULT_PAGE_TEMPLATES</span>
+    <span class="c1">#: opt-in type annotation feature, see the README examples</span>
+    <span class="n">annotations</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1">#: servers section of OAS :py:class:`spectree.models.Server`</span>
+    <span class="n">servers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Server</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1">#: OpenAPI `securitySchemes` :py:class:`spectree.models.SecurityScheme`</span>
+    <span class="n">security_schemes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">SecurityScheme</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="c1">#: OpenAPI `security` JSON at the global level</span>
+    <span class="n">security</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1"># Swagger OAuth2 configs</span>
+    <span class="c1">#: OAuth2 client id</span>
+    <span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1">#: OAuth2 client secret</span>
+    <span class="n">client_secret</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1">#: OAuth2 realm</span>
+    <span class="n">realm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1">#: OAuth2 app name</span>
+    <span class="n">app_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;spectree_app&quot;</span>
+    <span class="c1">#: OAuth2 scope separator</span>
+    <span class="n">scope_separator</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span>
+    <span class="c1">#: OAuth2 scopes</span>
+    <span class="n">scopes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1">#: OAuth2 additional query string params</span>
+    <span class="n">additional_query_string_params</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1">#: OAuth2 use basic authentication with access code grant</span>
+    <span class="n">use_basic_authentication_with_access_code_grant</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="c1">#: OAuth2 use PKCE with authorization code grant</span>
+    <span class="n">use_pkce_with_authorization_code_grant</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+        <span class="n">env_prefix</span> <span class="o">=</span> <span class="s2">&quot;spectree_&quot;</span>
+        <span class="n">validate_assignment</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="nd">@root_validator</span><span class="p">(</span><span class="n">pre</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">convert_to_lower_case</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">spec_url</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<div class="viewcode-block" id="Configuration.swagger_oauth2_config"><a class="viewcode-back" href="../../config.html#spectree.config.Configuration.swagger_oauth2_config">[docs]</a>    <span class="k">def</span> <span class="nf">swagger_oauth2_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return the swagger UI OAuth2 configs</span>
+
+<span class="sd">        ref: https://swagger.io/docs/open-source-tools/swagger-ui/usage/oauth2/</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">client_secret</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Do not use client_secret in production&quot;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict</span><span class="p">(</span>
+            <span class="n">include</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;client_id&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;client_secret&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;realm&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;app_name&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;scope_separator&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;scopes&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;additional_query_string_params&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;use_basic_authentication_with_access_code_grant&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;use_pkce_with_authorization_code_grant&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;use_basic_authentication_with_access_code_grant&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;true&quot;</span>
+            <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;use_basic_authentication_with_access_code_grant&quot;</span><span class="p">]</span>
+            <span class="k">else</span> <span class="s2">&quot;false&quot;</span>
+        <span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s2">&quot;use_pkce_with_authorization_code_grant&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;true&quot;</span> <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;use_pkce_with_authorization_code_grant&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="s2">&quot;false&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">config</span></div>
+
+    <span class="k">def</span> <span class="nf">openapi_info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict</span><span class="p">(</span>
+            <span class="n">include</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;description&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;version&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;terms_of_service&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;contact&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;license&quot;</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="n">exclude_none</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;terms_of_service&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">info</span><span class="p">[</span><span class="s2">&quot;termsOfService&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;terms_of_service&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">info</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, Keming Yang.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
